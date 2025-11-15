@@ -107,23 +107,7 @@ export default function HowItWorksSection() {
         ))}
       </div>
 
-      {/* Additional Information */}
-      <div className="mt-16 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200">
-        <div className="text-center">
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">Ready to Experience It?</h3>
-          <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-            Join thousands of users who trust our facial recognition system for secure and accurate identification.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl">
-              Start Free Trial
-            </button>
-            <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold border-2 border-blue-200 hover:border-blue-300 transition-colors">
-              View Demo
-            </button>
-          </div>
-        </div>
-      </div>
+      
     </section>
   );
 }

@@ -82,30 +82,43 @@ export default function FeaturesSection() {
         {features.map((feature, index) => (
           <div
             key={index}
-            className={`group p-8 rounded-2xl border-2 border-slate-200 hover:border-slate-300 bg-white hover:shadow-xl transition-all duration-500 cursor-pointer hover:-translate-y-2`}
+            className="group relative"
           >
-            {/* Animated Background */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500 rounded-2xl`} />
-            
-            {/* Content */}
-            <div className="relative z-10">
-              <div className={`p-4 rounded-xl ${feature.iconBg} w-fit mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                <div className={feature.textColor}>
-                  {feature.icon}
+            {/* Main Card */}
+            <div
+              className={`relative p-8 rounded-2xl border-2 border-slate-200 bg-white transition-all duration-500 cursor-pointer group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:border-slate-300 z-10 h-full`}
+            >
+              {/* Animated Background */}
+              <div 
+                className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500 rounded-2xl`} 
+              />
+              
+              {/* Content */}
+              <div className="relative z-10">
+                <div className={`p-4 rounded-xl ${feature.iconBg} w-fit mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <div className={feature.textColor}>
+                    {feature.icon}
+                  </div>
                 </div>
+                
+                <h3 className="text-xl font-bold text-slate-800 mb-4 group-hover:text-slate-900 transition-colors">
+                  {feature.title}
+                </h3>
+                
+                <p className="text-slate-600 leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
-              
-              <h3 className="text-xl font-bold text-slate-800 mb-4 group-hover:text-slate-900 transition-colors">
-                {feature.title}
-              </h3>
-              
-              <p className="text-slate-600 leading-relaxed">
-                {feature.description}
-              </p>
+
+              {/* Decorative Elements */}
+              <div className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full opacity-20 group-hover:opacity-30 transition-opacity"></div>
             </div>
 
-            {/* Decorative Elements */}
-            <div className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            {/* Shadow Effect */}
+            <div 
+              className={`absolute inset-0 bg-gradient-to-br ${feature.color} rounded-2xl opacity-0 group-hover:opacity-20 blur-xl transition-all duration-500 -z-10`}
+              style={{ transform: 'translateZ(0)' }}
+            />
           </div>
         ))}
       </div>

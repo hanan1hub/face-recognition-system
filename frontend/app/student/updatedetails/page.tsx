@@ -35,7 +35,6 @@ interface Student {
 interface FilterOptions {
   department: string;
   year: string;
-  division: string;
   studentId: string;
   search: string;
 }
@@ -56,7 +55,6 @@ export default function UpdateStudentDetails() {
   const [filters, setFilters] = useState<FilterOptions>({
     department: "",
     year: "",
-    division: "",
     studentId: "",
     search: ""
   });
@@ -148,9 +146,7 @@ export default function UpdateStudentDetails() {
       if (filters.year) {
         filtered = filtered.filter(s => s.year === filters.year);
       }
-      if (filters.division) {
-        filtered = filtered.filter(s => s.division === filters.division);
-      }
+      
       if (filters.studentId) {
         filtered = filtered.filter(s => s.studentId.toLowerCase().includes(filters.studentId.toLowerCase()));
       }
@@ -176,7 +172,6 @@ export default function UpdateStudentDetails() {
     setFilters({
       department: "",
       year: "",
-      division: "",
       studentId: "",
       search: ""
     });
@@ -351,20 +346,20 @@ export default function UpdateStudentDetails() {
         <div className="max-w-7xl mx-auto h-full flex flex-col gap-3">
           {/* Teacher Filters */}
           {userType === "teacher" && (
-            <div className="bg-white/70 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-lg flex-shrink-0">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <Filter className="w-5 h-5 text-blue-600" />
+            <div className="bg-white/70 backdrop-blur-lg rounded-xl p-3 border border-white/20 shadow-lg flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-blue-600" />
                   Filter Students
                 </h3>
                 <button
                   onClick={clearFilters}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all duration-300 shadow-lg text-sm"
+                  className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all duration-300 shadow-lg text-xs"
                 >
-                  Clear All Filters
+                  Clear Filters
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
                 <div>
                   <select
                     name="department"
@@ -391,19 +386,7 @@ export default function UpdateStudentDetails() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <select
-                    name="division"
-                    value={filters.division}
-                    onChange={handleFilterChange}
-                    className="w-full bg-white/60 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                  >
-                    <option value="">All Divisions</option>
-                    {divisions.map(div => (
-                      <option key={div} value={div}>Division {div}</option>
-                    ))}
-                  </select>
-                </div>
+                
                 <div>
                   <input
                     name="studentId"
@@ -432,10 +415,10 @@ export default function UpdateStudentDetails() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
             {/* Student List */}
-            <div className="bg-white/70 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-lg flex flex-col">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <div className="bg-white/70 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-lg flex flex-col min-h-0">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2 flex-shrink-0">
                 <Users className="w-5 h-5 text-blue-600" />
                 {userType === "teacher" ? "Students" : "Student Record"}
               </h3>
@@ -506,13 +489,13 @@ export default function UpdateStudentDetails() {
             </div>
 
             {/* Update Form */}
-            <div className="bg-white/70 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-lg flex flex-col">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <div className="bg-white/70 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-lg flex flex-col min-h-0">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2 flex-shrink-0">
                 <Edit3 className="w-5 h-5 text-green-600" />
                 {userType === "teacher" ? "Update Student Details" : "Update Student Details"}
               </h3>
               {selectedStudent ? (
-                <form onSubmit={handleUpdate} className="space-y-4 flex-1 overflow-y-auto">
+                <form onSubmit={handleUpdate} className="space-y-4 flex-1 overflow-y-auto min-h-0">
                   {/* Personal Information */}
                   <div className="bg-white/50 rounded-lg p-3 border border-gray-200">
                     <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2 text-sm">
@@ -670,7 +653,7 @@ export default function UpdateStudentDetails() {
                   <button
                     type="submit"
                     disabled={updating}
-                    className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex-shrink-0"
                   >
                     {updating ? "Updating..." : 
                      userType === "teacher" ? "Update Student Details" : "Update My Details"}

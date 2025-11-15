@@ -173,20 +173,7 @@ export default function TestimonialsSection() {
           ))}
         </div>
 
-        {/* CTA Section */}
-        <div className={`text-center mt-16 transition-all duration-1000 delay-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-8 border-2 border-blue-200">
-            <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
-              Join Thousands of Satisfied Customers
-            </h3>
-            <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-              Experience the future of attendance management and see why educational institutions worldwide trust FaceRecSys
-            </p>
-            <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
-              Start Your Free Trial
-            </button>
-          </div>
-        </div>
+        
       </div>
     </section>
   );

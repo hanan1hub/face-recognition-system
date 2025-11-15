@@ -7,6 +7,7 @@ attendance_bp = Blueprint("attendance", __name__)
 # ------------------------- GET ATTENDANCE -------------------------
 @attendance_bp.route('/api/attendance', methods=['GET'])
 def get_attendance():
+    """Get attendance records with proper roster merging - FIXED VERSION"""
     db = current_app.config.get("DB")
     attendance_col = db.attendance_records
     students_col = db.students
@@ -42,7 +43,8 @@ def get_attendance():
         if attendance_doc:
             for s in attendance_doc.get("students", []):
                 sid = s.get("student_id")
-                session_map[sid] = s
+                if sid:
+                    session_map[sid] = s
 
         attendance_list = []
         seen_students = set()
@@ -53,10 +55,12 @@ def get_attendance():
             if not sid or sid in seen_students:
                 continue
             seen_students.add(sid)
+            
             # Apply student_id filter if provided
             if student_id and sid != student_id:
                 continue
 
+            # Check if student was marked in session
             sess = session_map.get(sid, None)
             if sess:
                 present = bool(sess.get("present"))
@@ -70,30 +74,35 @@ def get_attendance():
                         # Fallback to str()
                         marked_at = str(marked_at)
             else:
+                # Student not in session = absent
                 present = False
                 marked_at = None
 
-                attendance_list.append({
-                    "studentId": str(sid) if sid is not None else "",
-                    "studentName": student.get("studentName") or student.get("student_name"),
-                    "date": str(attendance_doc.get("date")) if attendance_doc else str(date),
-                    "subject": str(attendance_doc.get("subject")) if attendance_doc else str(subject),
-                    "department": str(attendance_doc.get("department")) if attendance_doc else str(department),
-                    "year": str(attendance_doc.get("year")) if attendance_doc else str(year),
-                    "division": str(attendance_doc.get("division")) if attendance_doc else str(division),
-                    "status": "present" if present else "absent",
-                    "markedAt": marked_at
-                })
+            # ✅ FIXED: This is now OUTSIDE the if/else block
+            # So BOTH present AND absent students get added
+            attendance_list.append({
+                "studentId": sid,
+                "studentName": student.get("studentName") or student.get("student_name") or "Unknown",
+                "date": attendance_doc.get("date") if attendance_doc else date,
+                "subject": attendance_doc.get("subject") if attendance_doc else subject,
+                "department": attendance_doc.get("department") if attendance_doc else department,
+                "year": attendance_doc.get("year") if attendance_doc else year,
+                "division": attendance_doc.get("division") if attendance_doc else division,
+                "status": "present" if present else "absent",
+                "markedAt": marked_at
+            })
 
-        # Also include any session-only students not in roster (fallback)
+        # Also include any session-only students not in roster (edge case)
         if attendance_doc:
             for s in attendance_doc.get("students", []):
                 sid = s.get("student_id")
-                if sid in seen_students:
+                if not sid or sid in seen_students:
                     continue
                 if student_id and sid != student_id:
                     continue
+                    
                 seen_students.add(sid)
+                
                 # Convert any datetime in s.get('marked_at') to string
                 marked = s.get("marked_at")
                 if marked is not None:
@@ -103,22 +112,22 @@ def get_attendance():
                         marked = str(marked)
 
                 attendance_list.append({
-                    "studentId": str(sid) if sid is not None else "",
-                    "studentName": s.get("student_name"),
-                    "date": str(attendance_doc.get("date")),
-                    "subject": str(attendance_doc.get("subject")),
-                    "department": str(attendance_doc.get("department")),
-                    "year": str(attendance_doc.get("year")),
-                    "division": str(attendance_doc.get("division")),
+                    "studentId": sid,
+                    "studentName": s.get("student_name") or "Unknown",
+                    "date": attendance_doc.get("date"),
+                    "subject": attendance_doc.get("subject"),
+                    "department": attendance_doc.get("department"),
+                    "year": attendance_doc.get("year"),
+                    "division": attendance_doc.get("division"),
                     "status": "present" if s.get("present") else "absent",
                     "markedAt": marked
                 })
 
-        # Stats computed against roster size
-        student_filter = roster_filter
-        total_students = students_col.count_documents(student_filter) if student_filter else 0
+        # Stats computed - FIXED to count actual attendance list
+        # Use the actual attendance_list length instead of roster_filter count
+        total_students = len(attendance_list)
         present_count = sum(1 for r in attendance_list if r.get("status") == "present")
-        absent_count = max(total_students - present_count, 0)
+        absent_count = total_students - present_count
         attendance_rate = round((present_count / total_students * 100) if total_students > 0 else 0, 1)
 
         return jsonify({
@@ -133,12 +142,14 @@ def get_attendance():
         })
 
     except Exception as e:
+        current_app.logger.error(f"Error getting attendance: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ------------------------- EXPORT TO EXCEL -------------------------
 @attendance_bp.route('/api/attendance/export', methods=['GET'])
 def export_attendance():
+    """Export attendance data - FIXED VERSION"""
     db = current_app.config.get("DB")
     attendance_col = db.attendance_records
     students_col = db.students
@@ -160,10 +171,20 @@ def export_attendance():
 
         attendance_doc = attendance_col.find_one(query)
         present_students = set()
+        student_marked_times = {}
 
+        # ✅ FIXED: Only add to present_students if actually present
         if attendance_doc:
             for student in attendance_doc.get("students", []):
-                present_students.add(student.get("student_id"))
+                sid = student.get("student_id")
+                if sid and student.get("present") == True:  # ← Check if present is True
+                    present_students.add(sid)
+                    marked_at = student.get("marked_at")
+                    if marked_at:
+                        try:
+                            student_marked_times[sid] = marked_at.isoformat()
+                        except:
+                            student_marked_times[sid] = str(marked_at)
 
         # Get all students in that class
         student_filter = {}
@@ -178,15 +199,113 @@ def export_attendance():
             sid = student.get("studentId") or student.get("student_id")
             name = student.get("studentName") or student.get("student_name")
             status = "present" if sid in present_students else "absent"
+            marked_time = student_marked_times.get(sid, "")
+            
             export_data.append({
-                "studentId": str(sid) if sid is not None else "",
-                "name": name,
-                "subject": str(subject) if subject else "N/A",
-                "date": str(date) if date else "N/A",
-                "status": status
+                "studentId": sid or "",
+                "name": name or "Unknown",
+                "department": department or "N/A",
+                "year": year or "N/A",
+                "division": division or "N/A",
+                "subject": subject or "N/A",
+                "date": date or "N/A",
+                "status": status,
+                "markedAt": marked_time
             })
 
-        return jsonify({"success": True, "data": export_data})
+        # Sort by status (present first) then by name
+        export_data.sort(key=lambda x: (x["status"] != "present", x["name"]))
+
+        return jsonify({
+            "success": True, 
+            "data": export_data,
+            "summary": {
+                "total": len(export_data),
+                "present": len(present_students),
+                "absent": len(export_data) - len(present_students)
+            }
+        })
 
     except Exception as e:
+        current_app.logger.error(f"Error exporting attendance: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ------------------------- GET STUDENT ATTENDANCE HISTORY -------------------------
+@attendance_bp.route('/api/attendance/student/<student_id>', methods=['GET'])
+def get_student_attendance_history(student_id):
+    """Get attendance history for a specific student"""
+    db = current_app.config.get("DB")
+    attendance_col = db.attendance_records
+    students_col = db.students
+
+    try:
+        # Get student info
+        student = students_col.find_one({
+            "$or": [
+                {"studentId": student_id},
+                {"student_id": student_id}
+            ]
+        })
+
+        if not student:
+            return jsonify({"success": False, "error": "Student not found"}), 404
+
+        # Get all attendance sessions where this student appears
+        sessions = list(attendance_col.find({
+            "students.student_id": student_id
+        }).sort("date", -1))
+
+        history = []
+        for session in sessions:
+            # Find this student's record in the session
+            student_record = next(
+                (s for s in session.get("students", []) if s.get("student_id") == student_id),
+                None
+            )
+
+            if student_record:
+                marked_at = student_record.get("marked_at")
+                if marked_at:
+                    try:
+                        marked_at = marked_at.isoformat()
+                    except:
+                        marked_at = str(marked_at)
+
+                history.append({
+                    "date": session.get("date"),
+                    "subject": session.get("subject"),
+                    "department": session.get("department"),
+                    "year": session.get("year"),
+                    "division": session.get("division"),
+                    "status": "present" if student_record.get("present") else "absent",
+                    "markedAt": marked_at
+                })
+
+        # Calculate statistics
+        total_sessions = len(history)
+        present_count = sum(1 for h in history if h["status"] == "present")
+        absent_count = total_sessions - present_count
+        attendance_rate = round((present_count / total_sessions * 100) if total_sessions > 0 else 0, 1)
+
+        return jsonify({
+            "success": True,
+            "student": {
+                "studentId": student.get("studentId") or student.get("student_id"),
+                "studentName": student.get("studentName") or student.get("student_name"),
+                "department": student.get("department"),
+                "year": student.get("year"),
+                "division": student.get("division")
+            },
+            "history": history,
+            "statistics": {
+                "totalSessions": total_sessions,
+                "present": present_count,
+                "absent": absent_count,
+                "attendanceRate": attendance_rate
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting student history: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500

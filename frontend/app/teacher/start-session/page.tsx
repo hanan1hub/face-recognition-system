@@ -22,7 +22,7 @@ export default function DemoSessionPage() {
     division: "",
   });
 
-  const departments = ["Computer Science", "IT", "Electronics", "Mechanical", "Civil"];
+  const departments = ["Computer Science","Data Science", "IT", "Electronics", "Mechanical", "Civil"];
   const years = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
   const divisions = ["A", "B", "C", "D"];
 

@@ -7,7 +7,6 @@ import {
   Mail, 
   Lock, 
   User, 
-  GraduationCap, 
   BookOpen,
   Eye,
   EyeOff,
@@ -18,8 +17,7 @@ export default function SignInPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({ 
     email: "", 
-    password: "",
-    userType: "student" // Default to student
+    password: "" 
   });
   const [status, setStatus] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +39,7 @@ export default function SignInPage() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          userType: formData.userType
+          userType: "teacher"
         }),
       });
 
@@ -53,30 +51,21 @@ export default function SignInPage() {
         // Store login state and user info in localStorage
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userEmail", formData.email);
-        localStorage.setItem("userType", formData.userType); // ✅ fixed consistency
+        localStorage.setItem("userType", "teacher");
         
         if (data.user) {
           localStorage.setItem("username", data.user.username || data.user.name || "");
           localStorage.setItem("userId", data.user._id || "");
 
           // Store teacher-specific info if applicable
-          if (formData.userType === "teacher" && data.user.employeeId) {
+          if (data.user.employeeId) {
             localStorage.setItem("employeeId", data.user.employeeId);
-          }
-
-          // Store student-specific info if applicable  
-          if (formData.userType === "student" && data.user.studentId) {
-            localStorage.setItem("studentId", data.user.studentId);
           }
         }
 
-        // Redirect to appropriate dashboard based on user type
+        // Redirect to teacher dashboard
         setTimeout(() => {
-          if (formData.userType === "teacher") {
-            router.push("/teacher/dashboard");
-          } else {
-            router.push("/dashboard");
-          }
+          router.push("/teacher/dashboard");
         }, 1000);
       } else {
         setStatus(data.error || "Invalid credentials");
@@ -89,77 +78,51 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden opacity-30">
-        <div className="absolute -top-40 -right-32 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute -top-40 -right-32 w-80 h-80 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-green-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse animation-delay-2000"></div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+            <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
               <LogIn className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Welcome Back</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Teacher Login</h1>
           </div>
-          <p className="text-slate-600 text-sm font-medium">Sign in to your account to continue</p>
+          <p className="text-slate-600 text-sm font-medium">Sign in to your teacher account</p>
         </div>
 
         {/* Sign In Form */}
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 sm:p-8 border-2 border-slate-200 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* User Type Selection */}
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <label className="block text-slate-700 text-sm font-semibold mb-3 flex items-center gap-2">
-                <User className="w-4 h-4 text-blue-600" />
-                Sign in as:
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, userType: "student" }))}
-                  className={`p-3 rounded-xl border-2 transition-all duration-300 flex items-center justify-center gap-2 text-sm font-semibold hover:scale-105 ${
-                    formData.userType === "student" 
-                      ? "bg-blue-50 border-blue-300 text-blue-700 shadow-lg" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  <GraduationCap className="w-4 h-4" />
-                  Student
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, userType: "teacher" }))}
-                  className={`p-3 rounded-xl border-2 transition-all duration-300 flex items-center justify-center gap-2 text-sm font-semibold hover:scale-105 ${
-                    formData.userType === "teacher" 
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-lg" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Teacher
-                </button>
+            {/* Teacher Badge */}
+            <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 text-center">
+              <div className="flex items-center justify-center gap-2 text-emerald-700 font-semibold">
+                <BookOpen className="w-4 h-4" />
+                Teacher Account
               </div>
             </div>
 
             {/* Email Input */}
             <div>
               <label className="block text-slate-700 text-sm font-semibold mb-2">
-                Email Address
+                Email 
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   name="email"
                   type="email"
-                  placeholder={`Enter your ${formData.userType} email`}
+                  placeholder="Enter your teacher email"
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
                 />
               </div>
             </div>
@@ -178,7 +141,7 @@ export default function SignInPage() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-12 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-12 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
                 />
                 <button
                   type="button"
@@ -194,11 +157,7 @@ export default function SignInPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 shadow-lg hover:shadow-xl ${
-                formData.userType === 'teacher' 
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700' 
-                  : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
-              } text-white`}
+              className="w-full py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 shadow-lg hover:shadow-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
             >
               {isLoading ? (
                 <>
@@ -208,7 +167,7 @@ export default function SignInPage() {
               ) : (
                 <>
                   <LogIn className="w-5 h-5" />
-                  Sign In as {formData.userType === 'teacher' ? 'Teacher' : 'Student'}
+                  Sign In as Teacher
                 </>
               )}
             </button>
@@ -232,10 +191,10 @@ export default function SignInPage() {
             <button
               type="button"
               onClick={() => router.push("/signup")}
-              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors font-semibold hover:scale-105 transform duration-300"
+              className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-800 transition-colors font-semibold hover:scale-105 transform duration-300"
             >
               <UserPlus className="w-4 h-4" />
-              Create new account
+              Create new teacher account
             </button>
           </div>
         </div>
@@ -243,7 +202,7 @@ export default function SignInPage() {
         {/* Demo Info */}
         <div className="mt-6 text-center">
           <p className="text-slate-500 text-sm font-medium">
-            Face Recognition Attendance System
+            Teacher Portal - Face Recognition Attendance System
           </p>
         </div>
       </div>

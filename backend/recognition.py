@@ -5,12 +5,14 @@ from pymongo import MongoClient
 from scipy.spatial.distance import cosine
 import numpy as np
 import time
+from datetime import datetime
 
 # ----------------- MongoDB Setup -----------------
-MONGODB_URI = "mongodb+srv://Kamlesh-21:Guru2004@attendencesystem.nlapsic.mongodb.net/Attendencesystem?retryWrites=true&w=majority&appName=Attendencesystem"
+MONGODB_URI = "mongodb+srv://hhanan2005hb_db_user:hanan123@cluster0.s2nawxs.mongodb.net/AttendenceDB?retryWrites=true&w=majority"
 client = MongoClient(MONGODB_URI)
 db = client['facerecognition_db']
 collection = db['users']
+attendance_col = db['attendance_records']
 
 # ----------------- Face Detector -----------------
 detector = MTCNN()
@@ -23,25 +25,83 @@ def detect_faces(image):
     for face in faces:
         x, y, w, h = face['box']
         x, y = max(0, x), max(0, y)
-        face_img = rgb_image[y:y+h, x:x+w]
+        face_img = rgb_image[y:y + h, x:x + w]
         face_data.append({'box': (x, y, w, h), 'face': face_img})
     return face_data
 
 # ----------------- Extract Embedding -----------------
 def extract_embedding(face_img):
     try:
-        embedding = DeepFace.represent(face_img, model_name='Facenet512', detector_backend='skip')
+        # Resize face to reduce lag (DeepFace performs faster on 160x160)
+        face_resized = cv2.resize(face_img, (160, 160))
+        embedding = DeepFace.represent(face_resized, model_name='Facenet512', detector_backend='skip')
         return embedding[0]['embedding']
     except Exception as e:
         print("Error extracting embedding:", e)
         return None
 
+# ----------------- Attendance Marking -----------------
+def mark_attendance(student_id, name, subject="AI", department="Computer Science", year="2nd Year", division="A"):
+    today_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Check for today's attendance record or create one
+    record = attendance_col.find_one({
+        "date": today_date,
+        "subject": subject,
+        "department": department,
+        "year": year,
+        "division": division
+    })
+
+    if not record:
+        record = {
+            "date": today_date,
+            "subject": subject,
+            "department": department,
+            "year": year,
+            "division": division,
+            "created_at": datetime.now(),
+            "finalized": False,
+            "students": []
+        }
+        attendance_col.insert_one(record)
+
+    # Check if student already marked
+    existing = attendance_col.find_one({
+        "date": today_date,
+        "subject": subject,
+        "department": department,
+        "year": year,
+        "division": division,
+        "students.student_id": student_id
+    })
+
+    if not existing:
+        attendance_col.update_one(
+            {
+                "date": today_date,
+                "subject": subject,
+                "department": department,
+                "year": year,
+                "division": division
+            },
+            {
+                "$push": {
+                    "students": {
+                        "student_id": student_id,
+                        "student_name": name,
+                        "present": True,
+                        "marked_at": datetime.now()
+                    }
+                }
+            }
+        )
+        print(f"✅ Marked {name} ({student_id}) as present.")
+    else:
+        pass  # already marked
+
 # ----------------- Automatic Registration -----------------
 def auto_register_user(user_id, name, wait_time=5):
-    """
-    Automatically captures a face from webcam and registers user.
-    wait_time: Seconds to wait before registering (to stabilize face).
-    """
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
@@ -59,8 +119,8 @@ def auto_register_user(user_id, name, wait_time=5):
         faces = detect_faces(frame)
         if len(faces) == 1:
             x, y, w, h = faces[0]['box']
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-            cv2.putText(frame, "Face detected", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(frame, "Face detected", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
             if time.time() - start_time > wait_time:
                 embedding = extract_embedding(faces[0]['face'])
                 if embedding is not None:
@@ -70,13 +130,13 @@ def auto_register_user(user_id, name, wait_time=5):
                         'embedding': embedding.tolist() if isinstance(embedding, np.ndarray) else embedding
                     }
                     collection.insert_one(user_data)
-                    print(f"User {name} registered successfully.")
+                    print(f"✅ User {name} registered successfully.")
                     registered = True
                     break
         else:
-            cv2.putText(frame, f"{len(faces)} faces detected. Show only one face.", (50,50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,255), 2)
-            start_time = time.time()  # Reset timer if face not stable
+            cv2.putText(frame, f"{len(faces)} faces detected. Show only one face.", (50, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+            start_time = time.time()  # reset timer
 
         cv2.imshow("Automatic Registration", frame)
         key = cv2.waitKey(1) & 0xFF
@@ -86,21 +146,21 @@ def auto_register_user(user_id, name, wait_time=5):
     cap.release()
     cv2.destroyAllWindows()
     if not registered:
-        print("Registration failed. Please try again.")
+        print("❌ Registration failed. Please try again.")
 
 # ----------------- Live Recognition -----------------
 def live_recognition():
     users = list(collection.find())
     if not users:
-        print("No users registered.")
+        print("⚠️ No users registered.")
         return
 
-    threshold = 0.7  # Cosine similarity threshold
+    threshold = 0.7  # cosine distance threshold
 
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    print("Starting live recognition. Press 'q' to quit.")
+    print("🎥 Starting live recognition. Press 'q' to quit.")
 
     while True:
         ret, frame = cap.read()
@@ -129,13 +189,14 @@ def live_recognition():
 
             if min_distance < threshold:
                 name_text = f"{best_match['name']} ({min_distance:.2f})"
-                color = (0, 255, 0)  # Green for known
+                color = (0, 255, 0)
+                mark_attendance(best_match['user_id'], best_match['name'])
             else:
                 name_text = "Unknown"
-                color = (0, 0, 255)  # Red for unknown
+                color = (0, 0, 255)
 
-            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-            cv2.putText(frame, name_text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+            cv2.putText(frame, name_text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
         cv2.imshow("Live Recognition", frame)
         key = cv2.waitKey(1) & 0xFF
@@ -148,7 +209,7 @@ def live_recognition():
 # ----------------- Main Menu -----------------
 def main():
     while True:
-        print("\nFace Recognition System")
+        print("\n===== FACE RECOGNITION SYSTEM =====")
         print("1. Automatic Register User")
         print("2. Start Live Recognition")
         print("3. Exit")

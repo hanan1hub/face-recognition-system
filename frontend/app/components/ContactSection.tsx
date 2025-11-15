@@ -67,7 +67,7 @@ export default function ContactSection() {
       icon: <Mail className="w-6 h-6" />,
       title: "Email Us",
       description: "Get in touch via email",
-      contact: "hello@facerecognition.com",
+      contact: "done.done0090@gmail.com",
       color: "text-blue-600",
       bgColor: "bg-blue-100"
     },
@@ -75,7 +75,7 @@ export default function ContactSection() {
       icon: <Phone className="w-6 h-6" />,
       title: "Call Us", 
       description: "Speak to our team",
-      contact: "+1 (555) 123-4567",
+      contact: "+92 316-6007646",
       color: "text-emerald-600",
       bgColor: "bg-emerald-100"
     },
@@ -83,7 +83,7 @@ export default function ContactSection() {
       icon: <MapPin className="w-6 h-6" />,
       title: "Visit Us",
       description: "Our office location",
-      contact: "123 Tech Street, Silicon Valley",
+      contact: "Seecs,Nust H-12 Islamabad",
       color: "text-purple-600",
       bgColor: "bg-purple-100"
     }
@@ -149,22 +149,7 @@ export default function ContactSection() {
         </div>
       </div>
 
-      {/* Bottom CTA */}
-      <div className="mt-16 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200 text-center">
-        <h3 className="text-2xl font-bold text-slate-800 mb-3">Ready to Get Started?</h3>
-        <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-          Join the thousands of organizations already using our facial recognition technology 
-          to enhance their security and streamline their operations.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl">
-            Start Free Trial
-          </button>
-          <button className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold border-2 border-blue-200 hover:border-blue-300 transition-colors">
-            Schedule Demo
-          </button>
-        </div>
-      </div>
+      
     </section>
   );
 }

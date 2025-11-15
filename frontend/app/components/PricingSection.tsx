@@ -33,7 +33,7 @@ export default function PricingSection() {
       annualPrice: 79,
       icon: <Zap className="w-8 h-8" />,
       color: "from-emerald-500 to-teal-600",
-      popular: true,
+      popular: false,
       features: [
         "Up to 500 students",
         "Advanced AI recognition",

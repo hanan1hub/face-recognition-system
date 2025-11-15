@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  UserPlus, 
-  Mail, 
-  Lock, 
-  User, 
-  GraduationCap, 
+import {
+  UserPlus,
+  Mail,
+  Lock,
+  User,
   BookOpen,
   ArrowLeft,
   Home,
-  LogIn
+  LogIn,
+  BadgeInfo,
+  Briefcase,
 } from "lucide-react";
 
 export default function SignUpPage() {
@@ -20,13 +21,16 @@ export default function SignUpPage() {
     username: "",
     email: "",
     password: "",
-    userType: "student"
+    employeeId: "",
+    department: "",
   });
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +42,14 @@ export default function SignUpPage() {
       const res = await fetch("http://127.0.0.1:5000/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          userType: "teacher",
+          employeeId: formData.employeeId,
+          department: formData.department,
+        }),
       });
       const data = await res.json();
 
@@ -56,12 +67,12 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden opacity-30">
-        <div className="absolute -top-40 -right-32 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse animation-delay-4000"></div>
+        <div className="absolute -top-40 -right-32 w-80 h-80 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-green-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl animate-pulse animation-delay-4000"></div>
       </div>
 
       {/* Header */}
@@ -76,14 +87,18 @@ export default function SignUpPage() {
                 <ArrowLeft className="w-5 h-5" />
                 <span className="font-medium">Back to Home</span>
               </button>
-              
+
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
                   <UserPlus className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Join Us Today</h1>
-                  <p className="text-slate-600 text-sm font-medium">Create your account to get started</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+                    Teacher Registration
+                  </h1>
+                  <p className="text-slate-600 text-sm font-medium">
+                    Create your teacher account
+                  </p>
                 </div>
               </div>
             </div>
@@ -104,37 +119,11 @@ export default function SignUpPage() {
           {/* Sign Up Form */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 sm:p-8 border-2 border-slate-200 shadow-xl mt-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* User Type Selection */}
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <label className="block text-slate-700 text-sm font-semibold mb-3 flex items-center gap-2">
-                  <User className="w-4 h-4 text-purple-600" />
-                  Sign up as:
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, userType: "student" }))}
-                    className={`p-3 rounded-xl border-2 transition-all duration-300 flex items-center justify-center gap-2 text-sm font-semibold hover:scale-105 ${
-                      formData.userType === "student" 
-                        ? "bg-blue-50 border-blue-300 text-blue-700 shadow-lg" 
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    <GraduationCap className="w-4 h-4" />
-                    Student
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, userType: "teacher" }))}
-                    className={`p-3 rounded-xl border-2 transition-all duration-300 flex items-center justify-center gap-2 text-sm font-semibold hover:scale-105 ${
-                      formData.userType === "teacher" 
-                        ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-lg" 
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    Teacher
-                  </button>
+              {/* Teacher Badge */}
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 text-center">
+                <div className="flex items-center justify-center gap-2 text-emerald-700 font-semibold">
+                  <BookOpen className="w-4 h-4" />
+                  Teacher Account Registration
                 </div>
               </div>
 
@@ -152,7 +141,7 @@ export default function SignUpPage() {
                     required
                     value={formData.username}
                     onChange={handleChange}
-                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
                   />
                 </div>
               </div>
@@ -167,11 +156,11 @@ export default function SignUpPage() {
                   <input
                     name="email"
                     type="email"
-                    placeholder="Enter your email address"
+                    placeholder="Enter your teacher email"
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
                   />
                 </div>
               </div>
@@ -190,7 +179,45 @@ export default function SignUpPage() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
+                  />
+                </div>
+              </div>
+
+              {/* Employee ID Input */}
+              <div>
+                <label className="block text-slate-700 text-sm font-semibold mb-2">
+                  Employee ID
+                </label>
+                <div className="relative">
+                  <BadgeInfo className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    name="employeeId"
+                    type="text"
+                    placeholder="Enter your Employee ID (e.g., T-12345)"
+                    required
+                    value={formData.employeeId}
+                    onChange={handleChange}
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
+                  />
+                </div>
+              </div>
+
+              {/* Department Input */}
+              <div>
+                <label className="block text-slate-700 text-sm font-semibold mb-2">
+                  Department
+                </label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    name="department"
+                    type="text"
+                    placeholder="Enter your department (e.g., Computer Science)"
+                    required
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300"
                   />
                 </div>
               </div>
@@ -199,11 +226,7 @@ export default function SignUpPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 shadow-lg hover:shadow-xl ${
-                  formData.userType === 'teacher' 
-                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700' 
-                    : 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700'
-                } text-white`}
+                className="w-full py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 shadow-lg hover:shadow-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
               >
                 {isLoading ? (
                   <>
@@ -213,7 +236,7 @@ export default function SignUpPage() {
                 ) : (
                   <>
                     <UserPlus className="w-5 h-5" />
-                    Create {formData.userType === 'teacher' ? 'Teacher' : 'Student'} Account
+                    Create Teacher Account
                   </>
                 )}
               </button>
@@ -221,13 +244,15 @@ export default function SignUpPage() {
 
             {/* Status Message */}
             {status && (
-              <div className={`mt-6 p-4 rounded-xl text-center border-2 transition-all duration-300 ${
-                status.includes("successful") 
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                  : status.includes("Error") || status.includes("failed")
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : "bg-purple-50 text-purple-700 border-purple-200"
-              }`}>
+              <div
+                className={`mt-6 p-4 rounded-xl text-center border-2 transition-all duration-300 ${
+                  status.includes("successful")
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : status.includes("Error") || status.includes("failed")
+                    ? "bg-red-50 text-red-700 border-red-200"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                }`}
+              >
                 {status}
               </div>
             )}
@@ -236,7 +261,7 @@ export default function SignUpPage() {
             <div className="mt-6 pt-6 border-t border-slate-200 text-center">
               <button
                 onClick={() => router.push("/signin")}
-                className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors font-semibold hover:scale-105 transform duration-300"
+                className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-800 transition-colors font-semibold hover:scale-105 transform duration-300"
               >
                 <LogIn className="w-4 h-4" />
                 Already have an account? Sign in
@@ -247,7 +272,7 @@ export default function SignUpPage() {
           {/* Demo Info */}
           <div className="mt-6 text-center">
             <p className="text-slate-500 text-sm font-medium">
-              Face Recognition Attendance System
+              Teacher Portal - Face Recognition Attendance System
             </p>
           </div>
         </div>

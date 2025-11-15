@@ -1,5 +1,4 @@
-# teacher/attendance_records.py - OPTIMIZED VERSION
-
+# teacher/attendance_records.py - FIXED VERSION
 import io
 import base64
 import numpy as np
@@ -85,7 +84,8 @@ def extract_embedding_optimized(face_rgb):
 
 def get_attendance_collection():
     """Get the attendance collection from app config"""
-    return current_app.config.get("ATTENDANCE_COLLECTION")
+    db = current_app.config.get("DB")
+    return db.attendance_records
 
 # Enhanced embedding cache for attendance sessions
 class AttendanceEmbeddingCache:
@@ -141,40 +141,7 @@ class AttendanceEmbeddingCache:
 # Global cache instance for attendance
 attendance_cache = AttendanceEmbeddingCache()
 
-def find_best_match_optimized_attendance(query_embedding, students_col, session_doc, threshold=0.6):
-    """Optimized student matching for attendance with session-specific filtering"""
-    # Build filter for students in this session's class
-    student_filter = {"embeddings": {"$exists": True, "$ne": None}}
-    
-    # Add session-specific filters
-    if session_doc.get("department"):
-        student_filter["department"] = session_doc.get("department")
-    if session_doc.get("year"):
-        student_filter["year"] = session_doc.get("year")
-    if session_doc.get("division"):
-        student_filter["division"] = session_doc.get("division")
-    
-    # Get cached embeddings for this session
-    cached_embeddings = attendance_cache.get_session_embeddings(students_col, student_filter)
-    
-    if not cached_embeddings:
-        return None, float('inf')
-    
-    best_match = None
-    min_distance = float('inf')
-    
-    # Vectorized comparison for speed
-    for student_data in cached_embeddings:
-        stored_embedding = student_data['embedding']
-        distance = cosine(query_embedding, stored_embedding)
-        
-        if distance < min_distance:
-            min_distance = distance
-            best_match = student_data
-    
-    return best_match if min_distance < threshold else None, min_distance
-
-# ----------------- OPTIMIZED Routes ----------------- #
+# ----------------- ROUTES ----------------- #
 
 @attendance_session_bp.route("/create_session", methods=["POST"])
 def create_session():
@@ -306,7 +273,7 @@ def end_session():
 
 @attendance_session_bp.route("/real-mark", methods=["POST"])
 def mark_attendance_with_duplicate_prevention():
-    """Attendance marking with enhanced duplicate prevention"""
+    """Attendance marking with enhanced duplicate prevention - FIXED VERSION"""
     start_time = time.time()
     
     # Check if models are ready
@@ -339,21 +306,35 @@ def mark_attendance_with_duplicate_prevention():
         if session_doc.get("finalized"):
             return jsonify({"error": "Session already finalized"}), 400
 
-        # GET LIST OF ALREADY MARKED STUDENTS IN THIS SESSION
-        already_present_students = set()
-        for student_entry in session_doc.get("students", []):
-            if student_entry.get("present") == True:
-                already_present_students.add(student_entry.get("student_id"))
+        # GET FRESH LIST OF ALREADY MARKED STUDENTS (with refresh from DB)
+        def get_present_students():
+            fresh_session = collection.find_one({"_id": ObjectId(session_id)})
+            return set(
+                student_entry.get("student_id") 
+                for student_entry in fresh_session.get("students", []) 
+                if student_entry.get("present") == True
+            )
         
-        logger.info(f"Session {session_id} already has {len(already_present_students)} students marked present")
+        already_present_students = get_present_students()
+        logger.info(f"Session {session_id} has {len(already_present_students)} students marked present")
 
-        # Recognition logic (same as demo session)
+        # Build student filter based on session
         db = current_app.config.get("DB")
         students_col = db.students
-        threshold = float(current_app.config.get("THRESHOLD", 0.6))
         
-        # Search ALL students (same as demo session)
-        students = list(students_col.find({"embeddings": {"$exists": True, "$ne": None}}))
+        student_filter = {"embeddings": {"$exists": True, "$ne": None}}
+        if session_doc.get("department"): 
+            student_filter["department"] = session_doc.get("department")
+        if session_doc.get("year"): 
+            student_filter["year"] = session_doc.get("year")
+        if session_doc.get("division"): 
+            student_filter["division"] = session_doc.get("division")
+        
+        # Get students for this session only
+        students = list(students_col.find(student_filter))
+        logger.info(f"Searching among {len(students)} students in session's class")
+        
+        threshold = float(current_app.config.get("THRESHOLD", 0.6))
         results = []
 
         for f in faces:
@@ -367,7 +348,7 @@ def mark_attendance_with_duplicate_prevention():
                 })
                 continue
 
-            # EXACT SAME MATCHING LOGIC AS DEMO SESSION
+            # Find best match
             best, min_d = None, float("inf")
             for student in students:
                 stored_embeddings = student.get("embeddings", [])
@@ -389,9 +370,11 @@ def mark_attendance_with_duplicate_prevention():
                 student_id = best.get("studentId")
                 student_name = best.get("studentName")
 
-                # CHECK FOR DUPLICATE BEFORE MARKING
+                # REFRESH check - get latest state from DB
+                already_present_students = get_present_students()
+
+                # CHECK FOR DUPLICATE
                 if student_id in already_present_students:
-                    # Student already marked present in this session
                     results.append({
                         "match": {"user_id": student_id, "name": student_name},
                         "distance": round(float(min_d), 4),
@@ -401,18 +384,26 @@ def mark_attendance_with_duplicate_prevention():
                         "status": "duplicate",
                         "message": f"{student_name} is already marked present in this session"
                     })
-                    logger.info(f"Duplicate detection: {student_name} ({student_id}) already present")
+                    logger.info(f"Duplicate prevented: {student_name} ({student_id}) already present")
                     continue
 
-                # MARK ATTENDANCE (Student not yet marked)
+                # MARK ATTENDANCE - Try to update existing entry first
                 updated = collection.update_one(
-                    {"_id": ObjectId(session_id), "students.student_id": student_id, "students.present": False},
-                    {"$set": {"students.$.present": True, "students.$.marked_at": datetime.now()}}
+                    {
+                        "_id": ObjectId(session_id), 
+                        "students.student_id": student_id
+                    },
+                    {
+                        "$set": {
+                            "students.$.present": True, 
+                            "students.$.marked_at": datetime.now()
+                        }
+                    }
                 )
 
-                if updated.matched_count > 0 and updated.modified_count > 0:
-                    # Successfully marked present
-                    already_present_students.add(student_id)  # Update our local set
+                if updated.matched_count > 0:
+                    # Successfully updated existing entry
+                    already_present_students.add(student_id)
                     results.append({
                         "match": {"user_id": student_id, "name": student_name},
                         "distance": round(float(min_d), 4),
@@ -422,10 +413,10 @@ def mark_attendance_with_duplicate_prevention():
                         "status": "marked_present",
                         "message": f"{student_name} marked present successfully"
                     })
-                    logger.info(f"✅ Marked {student_name} ({student_id}) as present")
+                    logger.info(f"✅ Updated {student_name} ({student_id}) to present")
                 
                 else:
-                    # Student entry doesn't exist, create new one
+                    # Student not in session students list, add them
                     collection.update_one(
                         {"_id": ObjectId(session_id)},
                         {"$push": {
@@ -437,7 +428,7 @@ def mark_attendance_with_duplicate_prevention():
                             }
                         }}
                     )
-                    already_present_students.add(student_id)  # Update our local set
+                    already_present_students.add(student_id)
                     results.append({
                         "match": {"user_id": student_id, "name": student_name},
                         "distance": round(float(min_d), 4),
@@ -457,10 +448,13 @@ def mark_attendance_with_duplicate_prevention():
                     "confidence": round((1 - min_d) * 100, 1) if min_d != float('inf') else None,
                     "box": f["box"],
                     "status": "no_match",
-                    "message": "Face not recognized"
+                    "message": "Face not recognized or confidence too low"
                 })
 
         processing_time = time.time() - start_time
+        
+        # Get final count
+        final_present_count = len(get_present_students())
         
         # Return comprehensive response
         return jsonify({
@@ -469,93 +463,17 @@ def mark_attendance_with_duplicate_prevention():
             "processing_time": round(processing_time, 3),
             "session_info": {
                 "session_id": session_id,
-                "total_present_now": len(already_present_students),
+                "total_present_now": final_present_count,
                 "faces_detected": len(faces),
+                "faces_recognized": sum(1 for r in results if r.get("status") in ["marked_present", "marked_present_new"]),
                 "duplicates_prevented": sum(1 for r in results if r.get("status") == "duplicate")
             }
         })
 
     except Exception as e:
-        logger.error(f"Attendance error: {e}")
+        logger.error(f"Attendance error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-    """Finalize an attendance session with enhanced logging"""
-    data = request.get_json()
-    session_id = data.get("session_id")
-    if not session_id:
-        return jsonify({"error": "Missing session_id"}), 400
-
-    try:
-        collection = get_attendance_collection()
-        db = current_app.config.get("DB")
-        students_col = db.students
-
-        session_doc = collection.find_one({"_id": ObjectId(session_id)})
-        if not session_doc:
-            return jsonify({"error": "Session not found"}), 404
-
-        # Build set of present student ids
-        present_students = set(
-            s.get("student_id") for s in session_doc.get("students", []) 
-            if s.get("present")
-        )
-
-        # Get all students in that class
-        student_filter = {}
-        if session_doc.get("department"): student_filter["department"] = session_doc.get("department")
-        if session_doc.get("year"): student_filter["year"] = session_doc.get("year")
-        if session_doc.get("division"): student_filter["division"] = session_doc.get("division")
-
-        all_students = list(students_col.find(student_filter)) if student_filter else []
-        
-        # Mark absent students
-        absent_count = 0
-        for s in all_students:
-            sid = s.get("studentId") or s.get("student_id")
-            sname = s.get("studentName") or s.get("student_name")
-            
-            if sid not in present_students:
-                # Update existing entry or create new absent entry
-                updated = collection.update_one(
-                    {"_id": ObjectId(session_id), "students.student_id": sid},
-                    {"$set": {"students.$.present": False, "students.$.marked_at": None}}
-                )
-                
-                if updated.matched_count == 0:
-                    # No existing entry, add new absent entry
-                    collection.update_one(
-                        {"_id": ObjectId(session_id)},
-                        {"$push": {
-                            "students": {
-                                "student_id": sid, 
-                                "student_name": sname, 
-                                "present": False, 
-                                "marked_at": None
-                            }
-                        }}
-                    )
-                absent_count += 1
-
-        # Mark session as finalized
-        collection.update_one(
-            {"_id": ObjectId(session_id)}, 
-            {"$set": {"finalized": True, "ended_at": datetime.now()}}
-        )
-
-        logger.info(f"Session finalized: {len(present_students)} present, {absent_count} absent")
-
-        return jsonify({
-            "success": True,
-            "statistics": {
-                "present_count": len(present_students),
-                "absent_count": absent_count,
-                "total_students": len(all_students)
-            }
-        })
-
-    except Exception as e:
-        logger.error(f"Error ending session: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
 
 # Health check for attendance models
 @attendance_session_bp.route("/models/status", methods=["GET"])
